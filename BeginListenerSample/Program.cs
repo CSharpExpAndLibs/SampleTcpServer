@@ -22,14 +22,11 @@ namespace BeginListenerSample
 {
     class Program
     {
-        static int port = 12345;
+        static TcpListener tcpServer = null;
+        static Task serverTask = null;
+        static ClientManager clientManager;
+        static AutoResetEvent termServerEvent;
 
-        static void Usage()
-        {
-            Console.WriteLine("Usage:BeginListenerSample [-p port]");
-            Console.WriteLine(" Option:");
-            Console.WriteLine("     -p port: リッスンポート指定（デフォルト=12345）");
-        }
         static void Main(string[] args)
         {
             if (args.Length != 0 && args.Length != 2)
@@ -38,6 +35,7 @@ namespace BeginListenerSample
                 return;
             }
 
+            int port = 12345;
             if (args.Length == 2)
             {
                 if (args[0] != "-p")
@@ -51,28 +49,81 @@ namespace BeginListenerSample
                     return;
                 }
             }
-        }
+            // クライアントマネージャーの生成
+            clientManager = new ClientManager();
 
-        static void StartServer(string[] args)
-        {
-            TcpListener server = new TcpListener(IPAddress.Parse("127.0.0.1"), port);
-            server.Start();
+            // Serverを起動する
+            termServerEvent = new AutoResetEvent(false);
+            if (!StartServer(port))
+            {
+                Console.WriteLine("サーバー起動に失敗しました");
+                return;
+            }
+            Console.WriteLine($"Serverを起動しました。listen port={port}");
 
             while (true)
             {
-
-                Console.WriteLine("Main:Accept開始");
-                var r = server.BeginAcceptTcpClient(new AsyncCallback(SampleCallback), server);
-                Console.WriteLine("Main:Acceptから返った。r.WaitHandle監視開始");
-                r.AsyncWaitHandle.WaitOne();
-                Console.WriteLine("Main:r.WatiHandle検出");
+                Console.WriteLine("終了するには'Quit'を入力して下さい。");
+                var input = Console.ReadLine();
+                if (input == "Quit")
+                {
+                    TermServer();
+                    break;
+                }
             }
+
+            Console.WriteLine("何かキーを押して下さい");
+            Console.ReadLine();
         }
 
-        static void SampleCallback(IAsyncResult result)
+        static void Usage()
         {
-            Console.WriteLine("SampleCallback:Enter");
+            Console.WriteLine("Usage:BeginListenerSample [-p port]");
+            Console.WriteLine(" Option:");
+            Console.WriteLine("     -p port: リッスンポート指定（デフォルト=12345）");
+        }
 
+
+        static bool StartServer(int port)
+        {
+            try
+            {
+                tcpServer = new TcpListener(IPAddress.Parse("127.0.0.1"), port);
+                tcpServer.Start();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"サーバーの起動に失敗しました:例外発生:{e.Message}");
+                return false;
+            }
+
+            serverTask = Task.Run(() =>
+            {
+                while (true)
+                {
+                    var r = tcpServer.BeginAcceptTcpClient(new AsyncCallback(CommunicateWithClient), tcpServer);
+                    var evtIdx = WaitHandle.WaitAny(new WaitHandle[] { r.AsyncWaitHandle, termServerEvent });
+                    if (evtIdx == 0)
+                        continue;
+
+                    // ---- Serverの終了処理 ----
+                    // 全てのクライアントを閉じる
+                    lock (clientManager)
+                        clientManager.RemoveAll();
+
+                    tcpServer.Stop();
+                    break;
+                }
+            });
+
+            // serverTaskへのタスクスイッチ
+            Thread.Sleep(0);
+
+            return true;
+        }
+
+        static void CommunicateWithClient(IAsyncResult result)
+        {
             TcpClient client = null;
             try
             {
@@ -84,11 +135,20 @@ namespace BeginListenerSample
                 // このCallbackが呼ばれる。この条件でEndAcceptを呼ぶと
                 // 例外が起きるので、この例のようにcatchすること。
                 // これを知らないと間違いなく嵌ります。
+                return;
             }
+
+            // clientManagerへ登録
+            lock (clientManager)
+                clientManager.Add(client);
+
+            int clientId = clientManager.GetClientId(client);
+            Console.WriteLine($"新しいクライアントを開始しました:ClientId={clientId}");
+
             var stream = client.GetStream();
             var readData = new byte[256];
 
-            // Clientが接続を切るまで処理を続ける
+            // 相手が接続を切るか終了命令を受け取るまで処理を続ける
             while (true)
             {
                 try
@@ -96,26 +156,42 @@ namespace BeginListenerSample
                     var len = stream.Read(readData, 0, readData.Length);
                     if (len == 0)
                     {
-                        Console.WriteLine("SampleCallback:streamが閉じられた");
+                        Console.WriteLine($"クライアント[{clientId}]は接続を切断されました");
                         break;
                     }
-
                     var str = Encoding.UTF8.GetString(readData, 0, len);
 
-                    Console.WriteLine($"SampleCallback:Recieved '{str}'");
+                    Console.WriteLine($"クライアント[{clientId}]は'{str}'を受け取りました");
+                    if (str == "TermServer")
+                    {
+                        Console.WriteLine($"クライアント[{clientId}]は終了命令を受け取りました");
+                        TermServer();
+                        break;
+                    }
 
                     var writeData = Encoding.UTF8.GetBytes(str.ToUpper());
                     stream.Write(writeData, 0, writeData.Length);
                 }
-                catch (Exception ep)
+                catch
                 {
-                    Console.WriteLine($"SampleCallback:Clientから切断された:{ep.Message}");
+                    Console.WriteLine($"クライアント[{clientId}]は接続を切断されました");
                     break;
                 }
             }
 
-            client.Dispose();
-            Console.WriteLine("SampleCallback:Exit");
+            lock (clientManager)
+                clientManager.Remove(client);
+        }
+
+        static void TermServer()
+        {
+            termServerEvent.Set();
+            if (!serverTask.Wait(10000))
+            {
+                Console.WriteLine("TermServer:Timeoutしたけどどうしょうもないよね～");
+                return;
+            }
+            Console.WriteLine("TermServer:Serverを終了しました。");
         }
     }
 }

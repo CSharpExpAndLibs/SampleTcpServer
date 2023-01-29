@@ -13,7 +13,7 @@ namespace ClientManagement
         /// ClientInfo.clientのハッシュをキーにしてClientInfoを
         /// 格納する。
         /// </summary>
-        Dictionary<int, ClientInfo> clientList;
+        Dictionary<int, ClientInfo> clientList = new Dictionary<int, ClientInfo>();
 
         /// <summary>
         /// 登録されたクライアントに付与する一意のID
