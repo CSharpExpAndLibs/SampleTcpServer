@@ -76,7 +76,7 @@ namespace ClientManagement
         /// <returns></returns>
         public void RemoveAll(bool isDispose = true)
         {
-            foreach (var k in clientList.Keys)
+            foreach (var k in clientList.Keys.ToArray())
             {
                 var inf = clientList[k];
                 clientList.Remove(k);

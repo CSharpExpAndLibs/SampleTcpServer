@@ -11,21 +11,6 @@ namespace Client
 {
     class Client
     {
-        static bool IsValid(string cmd)
-        {
-            switch (cmd)
-            {
-                case "StartPrint":
-                case "StopPrint":
-                case "FinishProcess":
-                case "test":
-                    break;
-                default:
-                    return false;
-            }
-            return true;
-        }
-
         static void Usage()
         {
             Console.WriteLine("Usage:Client [-h][-p port]");
@@ -67,10 +52,34 @@ namespace Client
                 return;
             }
 
+            var stream = client.GetStream();
+            var recData = new byte[256];
             while (true)
             {
-                Console.WriteLine("送信する文字列を入力して下さい");
-                // TODO 23/1/28
+                Console.WriteLine("送信する文字列を入力して下さい。" +
+                    "'TermServer'を入力するとサーバーが終了します。");
+
+                var inStr = Console.ReadLine();
+                if (string.IsNullOrEmpty(inStr))
+                    continue;
+
+                var sendData = Encoding.UTF8.GetBytes(inStr);
+                try
+                {
+                    stream.Write(sendData, 0, sendData.Length);
+                    var c = stream.Read(recData, 0, recData.Length);
+                    if (c == 0)
+                    {
+                        Console.WriteLine("サーバーから切断されました。");
+                        break;
+                    }
+                    Console.WriteLine($"受信データ：{Encoding.UTF8.GetString(recData, 0, c)}");
+                }
+                catch
+                {
+                    Console.WriteLine("サーバーから切断されました。");
+                    break;
+                }
             }
             Console.WriteLine("Clientを終了します。何かキーを押して下さい。");
             Console.ReadLine();

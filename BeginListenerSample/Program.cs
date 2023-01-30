@@ -32,7 +32,7 @@ namespace BeginListenerSample
             if (args.Length != 0 && args.Length != 2)
             {
                 Usage();
-                return;
+                goto END;
             }
 
             int port = 12345;
@@ -41,12 +41,12 @@ namespace BeginListenerSample
                 if (args[0] != "-p")
                 {
                     Usage();
-                    return;
+                    goto END;
                 }
                 if (!int.TryParse(args[1], out port))
                 {
                     Usage();
-                    return;
+                    goto END;
                 }
             }
             // クライアントマネージャーの生成
@@ -57,7 +57,7 @@ namespace BeginListenerSample
             if (!StartServer(port))
             {
                 Console.WriteLine("サーバー起動に失敗しました");
-                return;
+                goto END;
             }
             Console.WriteLine($"Serverを起動しました。listen port={port}");
 
@@ -72,6 +72,7 @@ namespace BeginListenerSample
                 }
             }
 
+        END:
             Console.WriteLine("何かキーを押して下さい");
             Console.ReadLine();
         }
