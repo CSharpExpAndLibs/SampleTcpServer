@@ -101,21 +101,41 @@ namespace AsyncListenerSample
 
             serverTask = Task.Run(() =>
             {
+                AutoResetEvent acceptEvent = new AutoResetEvent(false);
                 while (true)
                 {
-                    var r = tcpServer.AcceptTcpClientAsync();
-                    var evtIdx = WaitHandle.WaitAny(new WaitHandle[] { r.AsyncWaitHandle, termServerEvent });
-                    if (evtIdx == 0)
-                        continue;
+                    TcpClient client = null;
+                    
+                    Task.Run(() =>
+                    {
+                        try
+                        {
+                            client = tcpServer.AcceptTcpClientAsync().Result;
+                            acceptEvent.Set();
+                        }
+                        catch
+                        {
+                            Console.WriteLine("Server停止によりaccept処理が中断しました。");
+                        }
+                    });
 
-                    // ---- Serverの終了処理 ----
-                    // 全てのクライアントを閉じる
-                    lock (clientManager)
-                        clientManager.RemoveAll();
+                    var evtIdx = WaitHandle.WaitAny(new WaitHandle[] { acceptEvent, termServerEvent });
+                    // Server終了イベント
+                    if (evtIdx == 1)
+                    {
+                        // ---- Serverの終了処理 ----
+                        // 全てのクライアントを閉じる
+                        lock (clientManager)
+                            clientManager.RemoveAll();
 
-                    tcpServer.Stop();
-                    break;
+                        tcpServer.Stop();
+                        break;
+                    }
+                    // client通信処理開始
+                    Task.Run(() => CommunicateWithClient(client));
+
                 }
+                acceptEvent.Dispose();
             });
 
             // serverTaskへのタスクスイッチ
@@ -124,22 +144,8 @@ namespace AsyncListenerSample
             return true;
         }
 
-        static void CommunicateWithClient(IAsyncResult result)
+        static void CommunicateWithClient(TcpClient client)
         {
-            TcpClient client = null;
-            try
-            {
-                client = ((TcpListener)result.AsyncState).EndAcceptTcpClient(result);
-            }
-            catch
-            {
-                // BeginAcceptの親クラスであるListenerが閉じられると
-                // このCallbackが呼ばれる。この条件でEndAcceptを呼ぶと
-                // 例外が起きるので、この例のようにcatchすること。
-                // これを知らないと間違いなく嵌ります。
-                return;
-            }
-
             // clientManagerへ登録
             lock (clientManager)
                 clientManager.Add(client);
