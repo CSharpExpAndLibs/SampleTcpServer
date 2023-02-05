@@ -23,7 +23,7 @@ namespace Client
             if (args.Length == 1)
             {
                 Usage();
-                return;
+                goto END;
             }
 
             int port = 12345;
@@ -32,12 +32,12 @@ namespace Client
                 if (args[0] != "-p")
                 {
                     Usage();
-                    return;
+                    goto END;
                 }
                 if (!int.TryParse(args[1], out port))
                 {
                     Usage();
-                    return;
+                    goto END;
                 }
             }
 
@@ -48,12 +48,32 @@ namespace Client
             }
             catch (Exception e)
             {
-                Console.WriteLine($"ホストへの接続に失敗しました ip = '127.0.0.1'、port = {port}:例外:{e.Message}");
-                return;
+                Console.WriteLine($"ホストへの接続に失敗しました ip = '127.0.0.1'," +
+                    $"port = {port}(例外発生)");
+                goto END;
             }
 
-            var stream = client.GetStream();
-            var recData = new byte[256];
+            Console.WriteLine($"ホストへ接続しました ip = '127.0.0.1'、port = {port}");
+
+            // クライアントIDを取得する
+            var cidStr = GetRecievMsg(client, "GetClientId");
+            if (cidStr == null)
+            {
+                Console.WriteLine("ホストから切断されました。");
+                goto END;
+            }
+            int cid;
+            if (!int.TryParse(cidStr, out cid))
+            {
+                Console.WriteLine("ホストはGetCliendIdコマンドに未対応です。");
+            }
+            else
+            {
+                Console.WriteLine($"クライアントIDは{cid}です。");
+            }
+
+            // Consoleから入力した文字列をサーバーへ送り
+            // 受信文字列を受け取る
             while (true)
             {
                 Console.WriteLine("送信する文字列を入力して下さい。" +
@@ -63,26 +83,39 @@ namespace Client
                 if (string.IsNullOrEmpty(inStr))
                     continue;
 
-                var sendData = Encoding.UTF8.GetBytes(inStr);
-                try
+                var rcvMsg = GetRecievMsg(client, inStr);
+                if (rcvMsg == null)
                 {
-                    stream.Write(sendData, 0, sendData.Length);
-                    var c = stream.Read(recData, 0, recData.Length);
-                    if (c == 0)
-                    {
-                        Console.WriteLine("サーバーから切断されました。");
-                        break;
-                    }
-                    Console.WriteLine($"受信データ：{Encoding.UTF8.GetString(recData, 0, c)}");
+                    Console.WriteLine("ホストから切断されました。");
+                    goto END;
                 }
-                catch
-                {
-                    Console.WriteLine("サーバーから切断されました。");
-                    break;
-                }
+                Console.WriteLine($"受信メッセージ={rcvMsg}");
             }
+
+        END:
             Console.WriteLine("Clientを終了します。何かキーを押して下さい。");
             Console.ReadLine();
+        }
+
+        static string GetRecievMsg(TcpClient client, string sendMsg)
+        {
+            var stream = client.GetStream();
+            var sendData = Encoding.UTF8.GetBytes(sendMsg);
+            var recData = new byte[256];
+            try
+            {
+                stream.Write(sendData, 0, sendData.Length);
+                var c = stream.Read(recData, 0, recData.Length);
+                if (c == 0)
+                {
+                    return null;
+                }
+                return Encoding.UTF8.GetString(recData, 0, c);
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

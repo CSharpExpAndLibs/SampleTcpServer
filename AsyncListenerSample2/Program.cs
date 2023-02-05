@@ -12,11 +12,12 @@ using ClientManagement;
 /// <summary>
 /// 次の仕様を持つサーバーをAcceptTcpClientAsyncを使って実装する。<br/>
 /// 1. 指定されたポートをリッスンし、接続したクライアント毎に個別のタスクで応答する。<br/>
-/// 2. クライアントから受け取った文字列を大文字に変換してクライアントへ返すと共に
+/// 2. クライアントから'GetClientId'を受け取ったらクライアントIDを返す。<br/>
+/// 3. クライアントから受け取った文字列を大文字に変換してクライアントへ返すと共に
 /// 文字列をコンソールに表示する。<br/>
-/// 3. クライアントから'TermServer'を受け取ったら接続中のクライアントを全て切断してから
+/// 4. クライアントから'TermServer'を受け取ったら接続中のクライアントを全て切断してから
 /// リスナを閉じて終了する。<br/>
-/// 4. コンソールから'Quit'を入力すると3.と同様に終了する。<br/>
+/// 5. コンソールから'Quit'を入力すると4.と同様に終了する。<br/>
 /// 
 /// AsyncListenerSampleをベースにして、async ~ await スタイルで書き直す。
 /// </summary>
@@ -167,14 +168,24 @@ namespace AsyncListenerSample2
                     var str = Encoding.UTF8.GetString(readData, 0, len);
 
                     Console.WriteLine($"クライアント[{clientId}]は'{str}'を受け取りました");
+
+                    string sendMsg = null;
                     if (str == "TermServer")
                     {
                         Console.WriteLine($"クライアント[{clientId}]は終了命令を受け取りました");
                         termServerEvent.Set();
                         break;
                     }
+                    else if (str == "GetClientId")
+                    {
+                        sendMsg = clientId.ToString();
+                    }
+                    else
+                    {
+                        sendMsg = str.ToUpper();
+                    }
 
-                    var writeData = Encoding.UTF8.GetBytes(str.ToUpper());
+                    var writeData = Encoding.UTF8.GetBytes(sendMsg);
                     stream.Write(writeData, 0, writeData.Length);
                 }
                 catch
