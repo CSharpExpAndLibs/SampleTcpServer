@@ -11,6 +11,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClientManagement", "ClientM
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AsyncListenerSample", "AsyncListenerSample\AsyncListenerSample.csproj", "{853BE50B-ACF7-4A1A-84C6-10B42F3535C5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SyncListenerSample", "SyncListenerSample\SyncListenerSample.csproj", "{54DE46C0-50DB-4427-B195-CA576D0A5723}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AsyncListenerSample2", "AsyncListenerSample2\AsyncListenerSample2.csproj", "{12D791D3-FD3D-42F0-9EEE-2394F6101860}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +37,14 @@ Global
 		{853BE50B-ACF7-4A1A-84C6-10B42F3535C5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{853BE50B-ACF7-4A1A-84C6-10B42F3535C5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{853BE50B-ACF7-4A1A-84C6-10B42F3535C5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{54DE46C0-50DB-4427-B195-CA576D0A5723}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{54DE46C0-50DB-4427-B195-CA576D0A5723}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{54DE46C0-50DB-4427-B195-CA576D0A5723}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{54DE46C0-50DB-4427-B195-CA576D0A5723}.Release|Any CPU.Build.0 = Release|Any CPU
+		{12D791D3-FD3D-42F0-9EEE-2394F6101860}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{12D791D3-FD3D-42F0-9EEE-2394F6101860}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{12D791D3-FD3D-42F0-9EEE-2394F6101860}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{12D791D3-FD3D-42F0-9EEE-2394F6101860}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
